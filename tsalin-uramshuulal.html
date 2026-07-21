@@ -1,0 +1,2244 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Цалин & урамшууллын тооцоо — Flumon v2</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --bg-card: #ffffff;
+    --bg-elev: #fafbfc;
+    --bg-soft: #eef0f3;
+    --border: #e2e5ea;
+    --border-strong: #cfd4dc;
+    --text: #1a1f2b;
+    --text-dim: #5c6573;
+    --text-faint: #8d95a3;
+    --accent: #c89800;
+    --accent-soft: #fff4d1;
+    --accent-bg: #fffbe6;
+    --green: #16a34a;
+    --green-bg: #dcfce7;
+    --green-border: #86efac;
+    --orange: #d97706;
+    --orange-bg: #fef3c7;
+    --orange-border: #fcd34d;
+    --red: #dc2626;
+    --red-bg: #fee2e2;
+    --red-border: #fca5a5;
+    --blue: #2563eb;
+    --blue-bg: #dbeafe;
+    --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+    --shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+    --mono: 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { font-size: 14px; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+    line-height: 1.5;
+  }
+
+  .header {
+    background: linear-gradient(180deg, #ffffff 0%, #f8f9fb 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 20px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .header h1 {
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .header h1::before {
+    content: '';
+    width: 4px; height: 22px;
+    background: var(--accent);
+    border-radius: 2px;
+  }
+  .header .sub { color: var(--text-dim); font-size: 13px; }
+
+  .container {
+    max-width: 1700px;
+    margin: 0 auto;
+    padding: 20px 32px 60px;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 2px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 24px;
+    overflow-x: auto;
+  }
+  .tab {
+    padding: 12px 18px;
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s;
+    font-family: inherit;
+    white-space: nowrap;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+  }
+  .card + .card { margin-top: 20px; }
+  .card-header {
+    padding: 14px 20px;
+    background: var(--bg-elev);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .card-header h2 {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-dim);
+  }
+  .card-body { padding: 20px; }
+
+  .params {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 14px;
+  }
+  .param {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .param label {
+    font-size: 11px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 500;
+  }
+  .param input, .param select {
+    background: var(--bg-card);
+    border: 1px solid var(--border-strong);
+    color: var(--text);
+    padding: 8px 10px;
+    border-radius: 5px;
+    font-family: var(--mono);
+    font-size: 13px;
+    transition: all 0.15s;
+  }
+  .param input:focus, .param select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  .param input:disabled, .param select:disabled {
+    background: var(--bg-soft);
+    color: var(--text-faint);
+    cursor: not-allowed;
+  }
+  .param input[type="number"] { text-align: right; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  thead th {
+    background: var(--bg-elev);
+    color: var(--text-dim);
+    text-align: left;
+    padding: 10px 12px;
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border-bottom: 1px solid var(--border-strong);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+  tbody td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  tbody tr:hover { background: var(--bg-elev); }
+  tbody tr.total-row {
+    background: var(--bg-soft);
+    font-weight: 600;
+  }
+  tbody tr.total-row td { border-top: 2px solid var(--border-strong); }
+  tfoot tr {
+    background: var(--bg-soft);
+    font-weight: 600;
+  }
+  tfoot td {
+    padding: 10px 12px;
+    border-top: 2px solid var(--border-strong);
+  }
+
+  .num {
+    font-family: var(--mono);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .num-input {
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--text);
+    padding: 4px 6px;
+    border-radius: 3px;
+    font-family: var(--mono);
+    font-size: 13px;
+    text-align: right;
+    width: 100%;
+    font-variant-numeric: tabular-nums;
+  }
+  .num-input:hover { border-color: var(--border-strong); }
+  .num-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: var(--accent-bg);
+  }
+  .num-input.editable {
+    background: var(--accent-bg);
+    border-color: var(--orange-border);
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border: 1px solid transparent;
+  }
+  .badge-green { background: var(--green-bg); color: var(--green); border-color: var(--green-border); }
+  .badge-orange { background: var(--orange-bg); color: var(--orange); border-color: var(--orange-border); }
+  .badge-red { background: var(--red-bg); color: var(--red); border-color: var(--red-border); }
+  .badge-blue { background: var(--blue-bg); color: var(--blue); }
+
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .kpi {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 18px;
+    box-shadow: var(--shadow-sm);
+  }
+  .kpi-label {
+    font-size: 11px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+  .kpi-value {
+    font-family: var(--mono);
+    font-size: 20px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .kpi-value.green { color: var(--green); }
+  .kpi-value.orange { color: var(--orange); }
+  .kpi-value.red { color: var(--red); }
+  .kpi-value.accent { color: var(--accent); }
+  .kpi-value.blue { color: var(--blue); }
+
+  input[type="date"], .registry-table input[type="date"], .registry-table select, .date-input, .registry-table .date-input {
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 3px 5px;
+    border-radius: 3px;
+  }
+  .registry-table input[type="date"]:hover, .registry-table select:hover,
+  .registry-table .date-input:hover { border-color: var(--border-strong); }
+  .registry-table input[type="date"]:focus, .registry-table select:focus,
+  .registry-table .date-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: var(--accent-bg);
+  }
+  .param .date-input {
+    background: var(--bg-card);
+    border: 1px solid var(--border-strong);
+    padding: 8px 10px;
+    border-radius: 5px;
+    font-size: 13px;
+  }
+  .param .date-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  .registry-table select { font-family: inherit; }
+
+  .toolbar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .btn {
+    background: var(--bg-card);
+    border: 1px solid var(--border-strong);
+    color: var(--text);
+    padding: 7px 14px;
+    border-radius: 5px;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 500;
+  }
+  .btn:hover { background: var(--bg-soft); border-color: var(--text-faint); }
+  .btn.primary {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+    font-weight: 600;
+  }
+  .btn.primary:hover { background: #b08600; border-color: #b08600; }
+  .btn.danger:hover { background: var(--red-bg); color: var(--red); border-color: var(--red); }
+  .btn.success {
+    background: var(--green);
+    color: white;
+    border-color: var(--green);
+  }
+  .btn.success:hover { background: #15803d; }
+
+  .search-input {
+    background: var(--bg-card);
+    border: 1px solid var(--border-strong);
+    color: var(--text);
+    padding: 7px 12px;
+    border-radius: 5px;
+    font-size: 13px;
+    width: 240px;
+    font-family: inherit;
+  }
+  .search-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+
+  .legend {
+    display: flex;
+    gap: 16px;
+    font-size: 12px;
+    flex-wrap: wrap;
+    margin-top: 14px;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 2px; border: 1px solid; }
+
+  .comparison-table td:not(:first-child) { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+  .row-action {
+    color: var(--text-faint);
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 14px;
+    transition: all 0.15s;
+  }
+  .row-action:hover { color: var(--red); background: var(--red-bg); }
+
+  .filter-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .filter-chip {
+    padding: 5px 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-strong);
+    border-radius: 100px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    color: var(--text-dim);
+    font-family: inherit;
+  }
+  .filter-chip:hover { color: var(--text); }
+  .filter-chip.active {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+    font-weight: 600;
+  }
+
+  .note {
+    color: var(--text-faint);
+    font-size: 12px;
+    font-style: italic;
+    margin-top: 12px;
+  }
+
+  .scroll-x { overflow-x: auto; }
+
+  .upload-zone {
+    border: 2px dashed var(--border-strong);
+    border-radius: 8px;
+    padding: 24px;
+    text-align: center;
+    background: var(--bg-elev);
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+  .upload-zone:hover, .upload-zone.dragover {
+    border-color: var(--accent);
+    background: var(--accent-bg);
+  }
+  .upload-zone p { color: var(--text-dim); margin: 4px 0; }
+  .upload-zone .upload-icon { font-size: 32px; margin-bottom: 8px; }
+  .upload-zone input { display: none; }
+
+  .info-banner {
+    background: var(--blue-bg);
+    border: 1px solid #93c5fd;
+    border-radius: 6px;
+    padding: 12px 16px;
+    font-size: 13px;
+    color: #1e40af;
+    margin-bottom: 16px;
+  }
+
+  .success-banner {
+    background: var(--green-bg);
+    border: 1px solid var(--green-border);
+    border-radius: 6px;
+    padding: 12px 16px;
+    font-size: 13px;
+    color: var(--green);
+    margin-bottom: 16px;
+  }
+
+  .timesheet-cell {
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 4px 6px !important;
+    min-width: 30px;
+    color: var(--text-dim);
+  }
+  .timesheet-cell.worked { background: var(--green-bg); color: var(--green); font-weight: 600; }
+  .timesheet-cell.rest { background: var(--bg-soft); color: var(--text-faint); }
+  .timesheet-cell.road { background: var(--blue-bg); color: var(--blue); }
+  .timesheet-cell.half { background: var(--orange-bg); color: var(--orange); }
+
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: var(--bg-soft); }
+  ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 5px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-faint); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Цалин & урамшууллын тооцоо</h1>
+  <div class="sub" id="todayDate"></div>
+</div>
+
+<div class="container">
+  <div class="tabs">
+    <button class="tab" style="display:none;" onclick="switchTab(event,'timesheet')">Цагийн бүртгэл</button>
+    <button class="tab active" onclick="switchTab(event,'salary')">Цалин</button>
+    <button class="tab" onclick="switchTab(event,'registry')">Урамшуулал</button>
+    <button class="tab" style="display:none;" onclick="switchTab(event,'v2')">Хувилбар 2 — Урамшуулал</button>
+    <button class="tab" style="display:none;" onclick="switchTab(event,'compare')">Харьцуулалт</button>
+  </div>
+
+  <!-- ============ TIMESHEET ============ -->
+  <div id="panel-timesheet" class="panel">
+    <div class="card">
+      <div class="card-header">
+        <h2>Цагийн бүртгэл оруулах</h2>
+        <div class="toolbar">
+          <button class="btn" onclick="downloadTemplate()">📥 Загвар татах</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="upload-zone" id="uploadZone">
+          <input type="file" id="fileInput" accept=".xlsx,.xls" />
+          <div class="upload-icon">📊</div>
+          <p style="color: var(--text); font-weight: 600;">Цагийн бүртгэлийн Excel файл оруулах</p>
+          <p>Энд дарах эсвэл файлаа чирж тавина уу (.xlsx, .xls)</p>
+          <p style="font-size: 11px; margin-top: 8px;">Файлын бүтэц: A=№, B=Нэр, C=Албан тушаал, D=Ажилд орсон огноо (заавал биш), цааш огнооны багана</p>
+        </div>
+        <div id="uploadResult"></div>
+      </div>
+    </div>
+
+    <div class="card" id="timesheetCard" style="display: none;">
+      <div class="card-header">
+        <h2>Цагийн бүртгэл <span id="timesheetMeta" style="color: var(--text-faint); font-weight: 400;"></span></h2>
+        <div class="toolbar">
+          <input type="text" class="search-input" id="timesheetSearch" placeholder="Хайх..." />
+          <button class="btn" onclick="exportTimesheet()">📤 Excel татах</button>
+        </div>
+      </div>
+      <div class="card-body" style="padding: 0;">
+        <div style="padding: 12px 20px 0; display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px;">
+          <span style="color: var(--text-dim);">Тэмдэглэгээ:</span>
+          <span style="display: inline-flex; align-items: center; gap: 6px;"><span style="background: var(--green-bg); color: var(--green); padding: 1px 8px; border-radius: 3px; font-family: var(--mono); font-weight: 600;">А</span> Ажилласан</span>
+          <span style="display: inline-flex; align-items: center; gap: 6px;"><span style="background: var(--blue-bg); color: var(--blue); padding: 1px 8px; border-radius: 3px; font-family: var(--mono); font-weight: 600;">Зам</span> Зам өдөр (ажилласан)</span>
+          <span style="display: inline-flex; align-items: center; gap: 6px;"><span style="background: var(--orange-bg); color: var(--orange); padding: 1px 8px; border-radius: 3px; font-family: var(--mono); font-weight: 600;">Тал</span> Хагас өдөр</span>
+          <span style="display: inline-flex; align-items: center; gap: 6px;"><span style="background: var(--bg-soft); color: var(--text-faint); padding: 1px 8px; border-radius: 3px; font-family: var(--mono); font-weight: 600;">Ч</span> Чөлөө (цалин олгогдохгүй)</span>
+        </div>
+        <div class="scroll-x">
+          <table id="timesheetTable" class="registry-table"></table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ REGISTRY ============ -->
+  <div id="panel-registry" class="panel">
+    <div class="card">
+      <div class="card-header">
+        <h2>Параметр</h2>
+      </div>
+      <div class="card-body">
+        <div class="params">
+          <div class="param">
+            <label>Тооцооны огноо</label>
+            <input type="text" class="date-input" id="calcDate" placeholder="YYYY.MM.DD" />
+          </div>
+          <div class="param">
+            <label>Туршилтын хугацаа (сар)</label>
+            <input type="number" id="probationMonths" value="3" min="0" />
+          </div>
+          <div class="param">
+            <label>Эрх үүсэх нэмэлт (сар)</label>
+            <input type="number" id="waitingMonths" value="3" min="0" />
+          </div>
+        </div>
+        <div class="legend">
+          <div class="legend-item"><div class="legend-dot" style="background: var(--red-bg); border-color: var(--red-border);"></div>Туршилт</div>
+          <div class="legend-item"><div class="legend-dot" style="background: var(--orange-bg); border-color: var(--orange-border);"></div>Жинхлэгдсэн</div>
+          <div class="legend-item"><div class="legend-dot" style="background: var(--green-bg); border-color: var(--green-border);"></div>Эрхтэй</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="kpi-row" id="kpiRow" style="margin-top: 20px;"></div>
+
+    <div class="card">
+      <div class="card-header">
+        <h2>Ажилтны жагсаалт <span id="empCount" style="color: var(--text-faint); font-weight: 400;"></span></h2>
+        <div class="toolbar">
+          <input type="text" class="search-input" id="searchInput" placeholder="Хайх (нэр, ажлын байр)..." />
+          <button class="btn" onclick="addEmployee()">+ Ажилтан нэмэх</button>
+          <button class="btn" onclick="document.getElementById('manualTimesheetUpload').click()" style="background:var(--accent-bg);border:1px solid var(--accent);color:var(--accent);">📥 Excel оруулах</button>
+          <input type="file" id="manualTimesheetUpload" accept=".xlsx,.xls" style="display:none" onchange="if(this.files[0])handleFile(this.files[0]);this.value='';" />
+          <button class="btn" onclick="exportRegistry()">📤 Excel</button>
+        </div>
+      </div>
+      <div class="card-body" style="padding: 0;">
+        <div class="filter-bar" style="padding: 12px 20px 0;">
+          <span style="color: var(--text-dim); font-size: 12px;">Шүүлт:</span>
+          <button class="filter-chip active" data-filter="all">Бүгд</button>
+          <button class="filter-chip" data-filter="Эрхтэй">Эрхтэй</button>
+          <button class="filter-chip" data-filter="Жинхлэгдсэн">Жинхлэгдсэн</button>
+          <button class="filter-chip" data-filter="Туршилт">Туршилт</button>
+        </div>
+        <div class="scroll-x">
+          <table class="registry-table" id="registryTable">
+            <thead>
+              <tr>
+                <th style="width: 40px;">№</th>
+                <th>Овог нэр</th>
+                <th>Ажлын байр</th>
+                <th>Ажилд орсон огноо</th>
+                <th class="num">Сар</th>
+                <th>Жинхлэгдэх</th>
+                <th>Эрх үүсэх</th>
+                <th>Төлөв</th>
+                <th class="num">Хувилбар 1 (₮)</th>
+                <th>Сүүлчийн авсан</th>
+                <th>Дараагийн огноо</th>
+                <th style="width:90px;">Олгох</th>
+                <th style="width:160px;">Тайлбар</th>
+                <th style="width: 30px;"></th>
+              </tr>
+            </thead>
+            <tbody id="registryBody"></tbody>
+            <tfoot>
+              <tr>
+                <td colspan="8" style="text-align: right;">Нэг улирлын нийт олговор:</td>
+                <td class="num" id="totalV1Q">—</td>
+                <td colspan="4"></td>
+                <td></td>
+              </tr>
+              <tr>
+                <td colspan="8" style="text-align: right;">Жилийн нийт олговор:</td>
+                <td class="num" id="totalV1Y">—</td>
+                <td colspan="4"></td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ SALARY ============ -->
+  <div id="panel-salary" class="panel active">
+    <div class="card">
+      <div class="card-header">
+        <h2>Цалингийн тооцоо — Цагийн бүртгэл дээр тулгуурлан</h2>
+        <div class="toolbar">
+          <button class="btn" onclick="exportSalary()">📤 Excel</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div id="salaryStatus"></div>
+
+        <div class="params" style="margin-bottom: 16px;">
+          <div class="param">
+            <label>Цалингийн цикл</label>
+            <select id="salaryCycle">
+              <option value="auto">Автомат (өнөөдрөөс)</option>
+              <option value="10">10-ны цалин (өмнөх 24 → 8)</option>
+              <option value="25">25-ны цалин (9 → 23)</option>
+              <option value="custom">Огноо гараар</option>
+            </select>
+          </div>
+          <div class="param">
+            <label>Цалингийн он сар</label>
+            <input type="text" class="date-input" id="salaryMonth" placeholder="YYYY.MM" />
+          </div>
+          <div class="param">
+            <label>Эхлэх огноо</label>
+            <input type="text" class="date-input" id="salaryFrom" placeholder="YYYY.MM.DD" />
+          </div>
+          <div class="param">
+            <label>Дуусах огноо</label>
+            <input type="text" class="date-input" id="salaryTo" placeholder="YYYY.MM.DD" />
+          </div>
+        </div>
+
+        <div class="info-banner" id="salaryRangeInfo">
+          Цалин = Өдрийн цалин × Ажилласан өдөр + (½ × Өдрийн цалин × Тал өдөр). "Зам" өдөр нь ажилласан өдөрт ороогүй.
+        </div>
+        <h3 style="font-size: 13px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px;">Ажилтны цалин</h3>
+        <div class="scroll-x">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:40px;">№</th>
+                <th style="width:160px;">Овог нэр</th>
+                <th style="width:140px;">Ажлын байр</th>
+                <th class="num">Бүтэн өдөр</th>
+                <th class="num">Зам</th>
+                <th class="num">Тал өдөр</th>
+                <th class="num">Чөлөө</th>
+                <th class="num">Нийт ажилласан</th>
+                <th class="num">Өдрийн цалин (₮)</th>
+                <th class="num">Цалин (₮)</th>
+                <th style="width:160px;">Тайлбар</th>
+                <th style="width:30px;"></th>
+              </tr>
+            </thead>
+            <tbody id="salaryBody"></tbody>
+            <tfoot>
+              <tr>
+                <td colspan="9" style="text-align: right;">НИЙТ ЦАЛИН:</td>
+                <td class="num" id="salaryTotal">—</td>
+                <td></td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ VARIANT 1 ============ -->
+  <div id="panel-v1" class="panel">
+    <div class="card">
+      <div class="card-header">
+        <h2>Хувилбар 1 — Бүх ажилчид адил урамшуулал</h2>
+      </div>
+      <div class="card-body">
+        <div class="params">
+          <div class="param">
+            <label>Нэг ажилтанд олгох улирлын урамшуулал (₮)</label>
+            <input type="number" id="v1Bonus" value="1000000" step="50000" />
+          </div>
+          <div class="param">
+            <label>Жилийн улирлын тоо</label>
+            <input type="number" id="v1Quarters" value="4" min="1" max="4" />
+          </div>
+        </div>
+
+        <h3 style="font-size: 13px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; margin: 24px 0 12px;">Ажлын байр тус бүрийн тооцоо (зөвхөн эрхтэй ажилтнууд)</h3>
+        <div class="scroll-x">
+          <table>
+            <thead>
+              <tr>
+                <th>Ажлын байр</th>
+                <th class="num">Эрхтэй ажилтны тоо</th>
+                <th class="num">Улирлын дүн (₮)</th>
+                <th class="num">Жилийн дүн (₮)</th>
+              </tr>
+            </thead>
+            <tbody id="v1Body"></tbody>
+            <tfoot>
+              <tr>
+                <td>НИЙТ</td>
+                <td class="num" id="v1TotalCount"></td>
+                <td class="num" id="v1TotalQ"></td>
+                <td class="num" id="v1TotalY"></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ VARIANT 2 ============ -->
+  <div id="panel-v2" class="panel">
+    <div class="card">
+      <div class="card-header">
+        <h2>Хувилбар 2 — Өдрийн цалинд суурилсан (20 өдөр × 30%)</h2>
+      </div>
+      <div class="card-body">
+        <div class="params">
+          <div class="param">
+            <label>Тооцооны өдрийн тоо</label>
+            <input type="number" id="v2Days" value="20" min="1" />
+          </div>
+          <div class="param">
+            <label>Урамшууллын хувь (%)</label>
+            <input type="number" id="v2Pct" value="30" min="0" max="100" step="1" />
+          </div>
+          <div class="param">
+            <label>Жилийн улирлын тоо</label>
+            <input type="number" id="v2Quarters" value="4" min="1" max="4" />
+          </div>
+        </div>
+
+        <h3 style="font-size: 13px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; margin: 24px 0 12px;">Ажлын байр тус бүрийн өдрийн цалин ба тооцоо</h3>
+        <div class="scroll-x">
+          <table>
+            <thead>
+              <tr>
+                <th>Ажлын байр</th>
+                <th class="num">Өдрийн цалин (₮)</th>
+                <th class="num">Эрхтэй тоо</th>
+                <th class="num">20 өдрийн цалин (₮)</th>
+                <th class="num">Урамшуулал/хүн (₮)</th>
+                <th class="num">Улирлын дүн (₮)</th>
+                <th class="num">Жилийн дүн (₮)</th>
+              </tr>
+            </thead>
+            <tbody id="v2Body"></tbody>
+            <tfoot>
+              <tr>
+                <td>НИЙТ</td>
+                <td></td>
+                <td class="num" id="v2TotalCount"></td>
+                <td></td>
+                <td></td>
+                <td class="num" id="v2TotalQ"></td>
+                <td class="num" id="v2TotalY"></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        <p class="note">Өдрийн цалинг шар талбарт засаж болно. Цалин табтай ижил утга.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ COMPARISON ============ -->
+  <div id="panel-compare" class="panel">
+    <div class="card">
+      <div class="card-header">
+        <h2>Хувилбаруудын харьцуулалт</h2>
+      </div>
+      <div class="card-body">
+        <div class="scroll-x">
+          <table class="comparison-table">
+            <thead>
+              <tr>
+                <th>Үзүүлэлт</th>
+                <th class="num">Хувилбар 1</th>
+                <th class="num">Хувилбар 2</th>
+                <th class="num">Зөрүү (Х2-Х1)</th>
+              </tr>
+            </thead>
+            <tbody id="compareBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ============ DATA ============
+const POSITIONS = [
+  'ИТА', 'Уулын мастер', 'Менежер', 'Экскаваторчин', 'Ковшийн оператор',
+  'Жолооч', 'Өрөмчин', 'Өрмийн туслах', 'Механик', 'Засварчин',
+  'Гагнуурчин', 'Нярав', 'Ялгалт', 'Тогооч', 'Туслах тогооч', 'Үйлчлэгч', 'Засварын туслах'
+];
+
+const DEFAULT_RATES = {
+  'ИТА': 250000, 'Уулын мастер': 250000, 'Менежер': 200000,
+  'Экскаваторчин': 250000, 'Ковшийн оператор': 230000, 'Жолооч': 200000,
+  'Өрөмчин': 200000, 'Өрмийн туслах': 150000, 'Механик': 230000,
+  'Засварчин': 150000, 'Гагнуурчин': 200000, 'Нярав': 120000,
+  'Ялгалт': 100000, 'Тогооч': 120000, 'Туслах тогооч': 100000,
+  'Үйлчлэгч': 100000, 'Засварын туслах': 150000
+};
+
+// Map raw position strings from timesheet to registry positions
+const POSITION_MAP = {
+  'Мастер': 'Уулын мастер',
+  'Инженер': 'ИТА',
+  'ХАБ': 'ИТА',
+  'Маркшейдер': 'ИТА',
+  'Чанар менежер': 'Менежер',
+  'Кемп менежер': 'Менежер',
+  'ЭКС': 'Экскаваторчин',
+  'Экс': 'Экскаваторчин',
+  'Унагалдай': 'Экскаваторчин',
+  'Ковш': 'Ковшийн оператор',
+  'Механик': 'Механик',
+  'Механик тус': 'Механик',
+  'Засвар': 'Засварчин',
+  'Жолооч': 'Жолооч',
+  'Өрөм': 'Өрөмчин',
+  'Нярав': 'Нярав',
+  'Гагнуурчин': 'Гагнуурчин',
+  'Ялгаач': 'Ялгалт',
+  'Тогооч': 'Тогооч',
+  'Туслах тогооч': 'Туслах тогооч',
+  'Үйлчлэгч': 'Үйлчлэгч',
+};
+
+const INITIAL_EMPLOYEES = [
+  {name:'Х.Баярхүү', pos:'Уулын мастер', start:'2025-01-01'},
+  {name:'Д.Түвшинтөгс', pos:'Уулын мастер', start:'2026-04-30'},
+  {name:'Б.Эрдэнэ-Очир', pos:'ИТА', start:'2025-01-01'},
+  {name:'О.Ганцоож', pos:'ИТА', start:'2025-01-01'},
+  {name:'Э.Жамбалдорж', pos:'ИТА', start:'2026-01-01'},
+  {name:'Э.Мөнх-Очир', pos:'ИТА', start:'2026-04-10'},
+  {name:'А.Шагай', pos:'ИТА', start:'2025-01-01'},
+  {name:'Б.Түмэн-Өлзий', pos:'ИТА', start:'2025-01-01'},
+  {name:'Д.Самбалхүндэв', pos:'Менежер', start:'2025-01-01'},
+  {name:'Б.Баттулга', pos:'Менежер', start:'2025-01-01'},
+  {name:'Б.Баярдагва', pos:'Экскаваторчин', start:'2026-02-01'},
+  {name:'Д.Доржсамбуу', pos:'Экскаваторчин', start:'2026-03-02'},
+  {name:'Н.Төрсайхан', pos:'Экскаваторчин', start:'2026-03-28'},
+  {name:'Д.Төмөр-Очир', pos:'Экскаваторчин', start:'2026-03-02'},
+  {name:'Д.Одхуяг', pos:'Экскаваторчин', start:'2026-03-22'},
+  {name:'Б.Адъяасүрэн', pos:'Экскаваторчин', start:'2026-05-18'},
+  {name:'З.Түвшин', pos:'Ковшийн оператор', start:'2025-01-01'},
+  {name:'Б.Гантүлхүүр', pos:'Ковшийн оператор', start:'2025-01-01'},
+  {name:'Г.Саранбаатар', pos:'Ковшийн оператор', start:'2026-03-01'},
+  {name:'Н.Саналбат', pos:'Ковшийн оператор', start:'2026-05-12'},
+  {name:'С.Зоригтбаатар', pos:'Ковшийн оператор', start:'2026-05-16'},
+  {name:'Н.Мөнхбаяр', pos:'Механик', start:'2025-01-01'},
+  {name:'Б.Дорждэрэм', pos:'Засварчин', start:'2025-01-01'},
+  {name:'Х.Эржанат', pos:'Жолооч', start:'2025-01-01'},
+  {name:'С.Дагвадорж', pos:'Жолооч', start:'2026-01-01'},
+  {name:'Г.Бат-Орших', pos:'Жолооч', start:'2025-01-01'},
+  {name:'П.Баттулга', pos:'Жолооч', start:'2026-04-27'},
+  {name:'Б.Одхүү', pos:'Жолооч', start:'2026-05-16'},
+  {name:'Г.Мичидгомбо', pos:'Жолооч', start:'2026-05-16'},
+  {name:'Б.Баянбат', pos:'Жолооч', start:'2026-05-17'},
+  {name:'Н.Билгүүн', pos:'Жолооч', start:'2026-05-18'},
+  {name:'Л.Амарбаясгалан', pos:'Өрөмчин', start:'2025-01-01'},
+  {name:'Л.Давааням', pos:'Нярав', start:'2025-01-01'},
+  {name:'Г.Наранчулуун', pos:'Гагнуурчин', start:'2025-01-01'},
+  {name:'В.Батзаяа', pos:'Ялгалт', start:'2025-01-01'},
+  {name:'Д.Гантулга', pos:'Ялгалт', start:'2025-01-01'},
+  {name:'Б.Байгальмаа', pos:'Ялгалт', start:'2025-01-01'},
+  {name:'И.Отгонбаяр', pos:'Ялгалт', start:'2026-01-02'},
+  {name:'Л.Батнасан', pos:'Ялгалт', start:'2026-01-02'},
+  {name:'Э.Цагаанбаяр', pos:'Ялгалт', start:'2025-01-01'},
+  {name:'П.Мэндбаяр', pos:'Ялгалт', start:'2026-03-01'},
+  {name:'Г.Бямбадорж', pos:'Ялгалт', start:'2026-03-01'},
+  {name:'Э.Бямбасүрэн', pos:'Ялгалт', start:'2026-03-02'},
+  {name:'Ө.Болдсайхан', pos:'Ялгалт', start:'2026-03-02'},
+  {name:'Б.Түвшинжаргал', pos:'Ялгалт', start:'2026-05-12'},
+  {name:'Б.Мөнхчимэг', pos:'Ялгалт', start:'2026-05-12'},
+  {name:'М.Гал-Эрдэнэ', pos:'Ялгалт', start:'2026-04-13'},
+  {name:'Чимэдсорогдон', pos:'Туслах тогооч', start:'2026-03-24'},
+  {name:'С.Мөнхтуяа', pos:'Тогооч', start:'2026-03-01'},
+  {name:'Бямбарагчаа', pos:'Тогооч', start:'2026-01-03'},
+  {name:'А.Түмэнтогоо', pos:'Үйлчлэгч', start:'2026-03-02'},
+  {name:'Ү.Баасандорж', pos:'Үйлчлэгч', start:'2025-01-01'},
+  {name:'Д.Оюунсайхан', pos:'Үйлчлэгч', start:'2026-04-02'},
+  {name:'Э.Мэндбаяр', pos:'Засварын туслах', start:'2026-01-01'},
+];
+
+// ============ STATE ============
+let state = {
+  employees: INITIAL_EMPLOYEES.map(e => ({...e, id: 'e' + Math.random().toString(36).slice(2,9)})),
+  rates: {...DEFAULT_RATES},
+  empRates: {},  // v129: per-person daily-rate override, keyed by employee name
+  excludedNames: {},  // v130: names deleted from salary/registry, keyed by name
+  notes: {},          // v153: per-person free-text description (Тайлбар), keyed by name
+  bonusHistory: {},   // v133: per-person bonus payment tracking — {name: {lastPaid: ISO|null, nextDue: ISO}}
+  timesheet: null,  // { dates: [Date], rows: [{name, pos, days: {dateStr: code}}] }
+  filter: 'all',
+  search: '',
+  timesheetSearch: ''
+};
+
+// v133: First scheduled bonus date — anyone without history defaults to this
+const FIRST_BONUS_DATE = '2026-07-10';
+function _addMonths(isoStr, n) {
+  const d = new Date(isoStr);
+  d.setMonth(d.getMonth() + n);
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function _todayISO() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+// v154: roll a due date forward in 3-month steps until it's not in the past,
+// so unpaid people show the NEXT quarterly date instead of a stale overdue one.
+function _rollBonusForward(iso) {
+  const today = _todayISO();
+  let d = iso;
+  let guard = 0;
+  while (d < today && guard++ < 40) d = _addMonths(d, 3);
+  return d;
+}
+function getBonusInfo(name, eligible) {
+  const h = state.bonusHistory[name];
+  if (h && h.nextDue) return { lastPaid: h.lastPaid || null, nextDue: h.nextDue };
+  // v154: the first scheduled bonus (2026-07-10) has been PAID to everyone
+  // who qualified. Qualifiers with no explicit history therefore default to
+  // "paid on 07-10, next due +3 months (2026-10-10)".
+  if (eligible && _todayISO() >= FIRST_BONUS_DATE) {
+    return { lastPaid: FIRST_BONUS_DATE, nextDue: _addMonths(FIRST_BONUS_DATE, 3) };
+  }
+  return { lastPaid: null, nextDue: _rollBonusForward(FIRST_BONUS_DATE) };
+}
+
+// v131: persist excludedNames + empRates across reloads via localStorage
+const PERSIST_KEY = 'flumon_bonus_persist_v1';
+function _persistSave() {
+  try {
+    const data = {
+      excludedNames: state.excludedNames || {},
+      empRates: state.empRates || {},
+      bonusHistory: state.bonusHistory || {},
+      notes: state.notes || {}
+    };
+    localStorage.setItem(PERSIST_KEY, JSON.stringify(data));
+  } catch (e) { console.warn('[v131] persist save failed:', e); }
+}
+function _persistLoad() {
+  try {
+    const raw = localStorage.getItem(PERSIST_KEY);
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    if (data && typeof data === 'object') {
+      if (data.excludedNames && typeof data.excludedNames === 'object') {
+        state.excludedNames = data.excludedNames;
+      }
+      if (data.empRates && typeof data.empRates === 'object') {
+        state.empRates = data.empRates;
+      }
+      if (data.bonusHistory && typeof data.bonusHistory === 'object') {
+        state.bonusHistory = data.bonusHistory;
+      }
+      if (data.notes && typeof data.notes === 'object') {
+        state.notes = data.notes;
+      }
+      console.log('[v131] loaded persisted state:',
+        Object.keys(state.excludedNames).length, 'excluded,',
+        Object.keys(state.empRates).length, 'rate overrides');
+    }
+  } catch (e) { console.warn('[v131] persist load failed:', e); }
+}
+_persistLoad();
+
+
+// ============ HELPERS ============
+function fmt(n) {
+  if (n === 0 || n === null || n === undefined || isNaN(n)) return '—';
+  return new Intl.NumberFormat('mn-MN').format(Math.round(n)) + '₮';
+}
+function fmt0(n) {
+  if (n === null || isNaN(n)) return '—';
+  return new Intl.NumberFormat('mn-MN').format(Math.round(n));
+}
+function fmtDate(d) {
+  if (!d) return '—';
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}.${m}.${day}`;
+}
+function parseDate(s) {
+  if (!s) return null;
+  if (s instanceof Date) {
+    if (isNaN(s)) return null;
+    return new Date(s.getFullYear(), s.getMonth(), s.getDate());
+  }
+  if (typeof s !== 'string') return null;
+  const str = s.trim();
+  // YYYY-MM-DD or YYYY/MM/DD or YYYY.MM.DD
+  let m = str.match(/^(\d{4})[-.\/](\d{1,2})[-.\/](\d{1,2})/);
+  if (m) {
+    const y = parseInt(m[1], 10);
+    const mo = parseInt(m[2], 10);
+    const d = parseInt(m[3], 10);
+    if (y >= 1900 && y <= 2200 && mo >= 1 && mo <= 12 && d >= 1 && d <= 31) {
+      return new Date(y, mo - 1, d);
+    }
+  }
+  // DD.MM.YYYY or MM/DD/YYYY (4-digit year at end)
+  m = str.match(/^(\d{1,2})[-.\/](\d{1,2})[-.\/](\d{4})/);
+  if (m) {
+    const a = parseInt(m[1], 10);
+    const b = parseInt(m[2], 10);
+    const y = parseInt(m[3], 10);
+    if (y >= 1900 && y <= 2200) {
+      // If first > 12, must be DD.MM.YYYY
+      if (a > 12 && b <= 12) return new Date(y, b - 1, a);
+      // Otherwise assume MM/DD/YYYY (US)
+      if (a <= 12 && b <= 31) return new Date(y, a - 1, b);
+    }
+  }
+  return null;
+}
+
+// Convert any date back to YYYY-MM-DD for inputs
+function toDateInput(s) {
+  if (!s) return '';
+  const d = parseDate(s);
+  if (!d) return '';
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+// Display format: 2025.01.01
+function toDotted(s) {
+  if (!s) return '';
+  const d = parseDate(s);
+  if (!d) return '';
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}.${m}.${day}`;
+}
+
+// Parse dotted YYYY.MM.DD into Date
+function fromDotted(s) {
+  if (!s) return null;
+  const m = String(s).trim().match(/^(\d{4})[.\-\/](\d{1,2})[.\-\/](\d{1,2})$/);
+  if (!m) return null;
+  return new Date(parseInt(m[1]), parseInt(m[2]) - 1, parseInt(m[3]));
+}
+function monthsBetween(start, end) {
+  if (!start || !end) return null;
+  let months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
+  if (end.getDate() < start.getDate()) months--;
+  return Math.max(0, months);
+}
+function addMonths(d, m) {
+  if (!d) return null;
+  const r = new Date(d);
+  r.setMonth(r.getMonth() + m);
+  return r;
+}
+function uid() { return 'e' + Math.random().toString(36).slice(2, 9); }
+
+// Convert Date to local YYYY-MM-DD (avoids UTC shift)
+function toLocalISO(d) {
+  if (!d) return '';
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+// ============ STATUS LOGIC ============
+function computeStatus(emp, params) {
+  const start = parseDate(emp.start);
+  if (!start) return { status: null, months: null, permDate: null, eligDate: null };
+  const months = monthsBetween(start, params.calcDate);
+  const permDate = addMonths(start, params.probationMonths);
+  const eligDate = addMonths(start, params.probationMonths + params.waitingMonths);
+  let status;
+  if (params.calcDate >= eligDate) status = 'Эрхтэй';
+  else if (params.calcDate >= permDate) status = 'Жинхлэгдсэн';
+  else status = 'Туршилт';
+  return { status, months, permDate, eligDate };
+}
+
+function getParams() {
+  const v = document.getElementById('calcDate').value;
+  const d = fromDotted(v) || parseDate(v);
+  return {
+    calcDate: d,
+    probationMonths: +document.getElementById('probationMonths').value || 0,
+    waitingMonths: +document.getElementById('waitingMonths').value || 0,
+  };
+}
+function getV1Params() {
+  return {
+    bonus: +document.getElementById('v1Bonus').value || 0,
+    quarters: +document.getElementById('v1Quarters').value || 4,
+  };
+}
+function getV2Params() {
+  return {
+    days: +document.getElementById('v2Days').value || 20,
+    pct: (+document.getElementById('v2Pct').value || 0) / 100,
+    quarters: +document.getElementById('v2Quarters').value || 4,
+  };
+}
+
+// ============ EXCEL UPLOAD ============
+function parseColumnDate(v, fallbackYear) {
+  if (v === null || v === undefined || v === '') return null;
+  if (v instanceof Date) {
+    // SheetJS creates dates with LOCAL constructor — use local getters
+    return new Date(v.getFullYear(), v.getMonth(), v.getDate());
+  }
+  // Excel may serialize dates as numbers
+  if (typeof v === 'number') {
+    // Two cases: serial Excel date (large number, > 30000) OR M.D format like 1.8
+    if (v > 30000) {
+      // Excel serial date: (v - 25569) * 86400 * 1000 gives UTC ms
+      // Result Date is UTC midnight; extract UTC components for local equivalent
+      const utc = new Date((v - 25569) * 86400 * 1000);
+      return new Date(utc.getUTCFullYear(), utc.getUTCMonth(), utc.getUTCDate());
+    }
+    // M.D format - convert via string
+    const s = String(v);
+    if (s.includes('.')) {
+      const [m, d] = s.split('.').map(p => parseInt(p, 10));
+      if (m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+        return new Date(fallbackYear, m - 1, d);
+      }
+    }
+    return null;
+  }
+  if (typeof v === 'string') {
+    // Try parsing common formats - delegate to parseDate which is strict
+    const parsed = parseDate(v);
+    if (parsed) return parsed;
+    // M.D or M/D (single-digit year-less format from headers)
+    const trimmed = v.trim();
+    const m1 = trimmed.match(/^(\d{1,2})[./](\d{1,2})$/);
+    if (m1) {
+      const m = parseInt(m1[1], 10), d = parseInt(m1[2], 10);
+      if (m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+        return new Date(fallbackYear, m - 1, d);
+      }
+    }
+  }
+  return null;
+}
+
+function isWorkedCode(v) {
+  if (!v) return false;
+  const s = String(v).trim();
+  return s !== '' && s !== '-';
+}
+
+function classifyCode(v) {
+  if (!v) return null;
+  const s = String(v).trim().toUpperCase();
+  if (s === '' || s === '-') return null;
+  // Ч = чөлөө (rest/off-day) — not worked, no salary
+  if (s === 'Ч') return 'rest';
+  // А = ажилласан
+  if (s === 'А' || s === 'A') return 'worked';
+  if (s.startsWith('ЗАМ')) return 'road';
+  if (s.startsWith('ТАЛ')) return 'half';
+  if (s === 'ӨРӨМ') return 'worked';
+  // Any other non-empty mark — count as worked
+  return 'worked';
+}
+
+function handleFile(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, { type: 'array', cellDates: false });
+      // Find a sheet that looks like timesheet — has Нэр column
+      let sheet = null, sheetName = null;
+      for (const name of wb.SheetNames) {
+        const ws = wb.Sheets[name];
+        const json = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, dateNF: 'yyyy-mm-dd' });
+        // Look for header row with Нэр
+        for (let i = 0; i < Math.min(5, json.length); i++) {
+          const row = json[i] || [];
+          if (row.some(c => c && String(c).includes('Нэр'))) {
+            sheet = ws;
+            sheetName = name;
+            break;
+          }
+        }
+        if (sheet) break;
+      }
+      if (!sheet) {
+        // Fallback to first sheet
+        sheet = wb.Sheets[wb.SheetNames[0]];
+        sheetName = wb.SheetNames[0];
+      }
+
+      const raw = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true, dateNF: 'yyyy-mm-dd' });
+      // Detect header row (contains "Нэр")
+      let headerRow = 0;
+      for (let i = 0; i < Math.min(10, raw.length); i++) {
+        const row = raw[i] || [];
+        if (row.some(c => c && String(c).includes('Нэр'))) {
+          headerRow = i;
+          break;
+        }
+      }
+
+      // Find column indices for Нэр, Албан тушаал, and Ажилд орсон огноо
+      const headers = raw[headerRow] || [];
+      let nameCol = -1, posCol = -1, numCol = -1, hireCol = -1;
+      headers.forEach((h, i) => {
+        const s = String(h || '').toLowerCase();
+        if (s.includes('нэр') && nameCol < 0) nameCol = i;
+        else if ((s.includes('тушаал') || s.includes('албан') || s.includes('ажлын байр')) && posCol < 0) posCol = i;
+        else if ((s === '№' || s.includes('дугаар')) && numCol < 0) numCol = i;
+        else if ((s.includes('ажилд орсон') || s.includes('орсон огноо') || s.includes('эхэлсэн')) && hireCol < 0) hireCol = i;
+      });
+      if (nameCol < 0) { showUploadError('Нэр баганыг олж чадсангүй'); return; }
+
+      // Date columns start AFTER name/pos/hire columns
+      const dateStartCol = Math.max(nameCol, posCol, hireCol) + 1;
+
+      // Determine year from first valid date if any
+      const today = new Date();
+      const fallbackYear = today.getFullYear();
+
+      // Parse date headers with context-aware M.D parsing
+      const dates = [];
+      const colDateMap = {};
+      let lastDate = null;
+
+      // Debug: log all header types
+      const debugHeaders = [];
+
+      for (let c = dateStartCol; c < headers.length; c++) {
+        const v = headers[c];
+        let d = parseColumnDate(v, fallbackYear);
+
+        debugHeaders.push({col: c, type: v === null ? 'null' : v instanceof Date ? 'Date' : typeof v, raw: v, parsed: d ? toLocalISO(d) : null});
+
+        // Smart M.D fix: if Excel collapsed "1.10" → 1.1, the previous date helps disambiguate
+        if (d && lastDate) {
+          const isShortMD = (typeof v === 'number' && /^\d+\.\d$/.test(String(v))) ||
+                            (typeof v === 'string' && /^\d{1,2}\.\d$/.test(v.trim()));
+          if (isShortMD) {
+            const sameMonthAsLast = d.getMonth() === lastDate.getMonth();
+            // If parsed date is earlier than or equal to last date in same month, it was probably truncated
+            // e.g. last=Jan 9, current "1.1" → should be Jan 10
+            if (d <= lastDate && sameMonthAsLast) {
+              const day = d.getDate() * 10;
+              const tryDate = new Date(d.getFullYear(), d.getMonth(), day);
+              if (tryDate > lastDate) d = tryDate;
+            }
+          }
+        }
+
+        if (d) {
+          dates.push(d);
+          colDateMap[c] = d;
+          lastDate = d;
+        }
+      }
+
+      // Debug: expose to console for troubleshooting
+      console.log('Date header parsing:', debugHeaders);
+      console.log('Total dates parsed:', dates.length, 'Date range:',
+        dates.length ? `${toLocalISO(dates[0])} → ${toLocalISO(dates[dates.length-1])}` : 'none');
+
+      // Parse rows
+      const rows = [];
+      for (let r = headerRow + 1; r < raw.length; r++) {
+        const row = raw[r] || [];
+        const name = row[nameCol];
+        if (!name || !String(name).trim()) continue;
+        const posRaw = posCol >= 0 ? (row[posCol] || '') : '';
+
+        // Read hire date if column exists
+        let hireDate = null;
+        if (hireCol >= 0) {
+          hireDate = parseColumnDate(row[hireCol], fallbackYear);
+          // Also accept full date strings
+          if (!hireDate && row[hireCol]) {
+            const s = String(row[hireCol]).trim();
+            const parsed = new Date(s);
+            if (!isNaN(parsed)) hireDate = parsed;
+          }
+        }
+
+        const days = {};
+        for (const c in colDateMap) {
+          const v = row[c];
+          if (v !== null && v !== undefined && String(v).trim() !== '' && String(v).trim() !== '-') {
+            days[toLocalISO(colDateMap[c])] = String(v).trim();
+          }
+        }
+        rows.push({
+          id: uid(),
+          name: String(name).trim(),
+          posRaw: String(posRaw).trim(),
+          pos: POSITION_MAP[String(posRaw).trim()] || String(posRaw).trim(),
+          hireDate,
+          days
+        });
+      }
+
+      state.timesheet = { dates, rows, sheetName };
+
+      // Sync to employees registry: prefer hire date column, else use first marked day
+      rows.forEach(row => {
+        const existing = state.employees.find(e => e.name === row.name);
+
+        // Priority 1: Excel "Ажилд орсон огноо" column
+        // Priority 2: Earliest day with a mark
+        let startStr = '';
+        if (row.hireDate) {
+          startStr = toLocalISO(row.hireDate);
+        } else {
+          let earliest = null;
+          for (const dStr in row.days) {
+            const parts = dStr.split('-');
+            const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+            if (!earliest || d < earliest) earliest = d;
+          }
+          if (earliest) startStr = toLocalISO(earliest);
+        }
+
+        const mappedPos = POSITION_MAP[row.posRaw] || row.posRaw || POSITIONS[0];
+
+        if (existing) {
+          // If Excel has explicit hire date, that always wins
+          if (row.hireDate) {
+            existing.start = startStr;
+          } else if (startStr && (!existing.start || new Date(startStr) < new Date(existing.start))) {
+            existing.start = startStr;
+          }
+          if (!existing.pos && mappedPos) existing.pos = mappedPos;
+        } else {
+          state.employees.push({
+            id: uid(),
+            name: row.name,
+            pos: mappedPos,
+            start: startStr
+          });
+        }
+      });
+
+      showUploadSuccess(`✓ ${rows.length} ажилтан, ${dates.length} өдрийн бүртгэл амжилттай оруулсан. ` +
+        (dates.length ? `Огнооны хүрээ: ${toLocalISO(dates[0])} → ${toLocalISO(dates[dates.length-1])}. ` : '') +
+        `Шинээр ажилтан бүртгэлд нэмэгдсэн.`);
+      renderTimesheet();
+      renderAll();
+    } catch (err) {
+      console.error(err);
+      showUploadError('Файл уншихад алдаа гарлаа: ' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function showUploadSuccess(msg) {
+  document.getElementById('uploadResult').innerHTML = `<div class="success-banner" style="margin-top: 16px;">${msg}</div>`;
+}
+function showUploadError(msg) {
+  document.getElementById('uploadResult').innerHTML = `<div class="info-banner" style="margin-top: 16px; background: var(--red-bg); border-color: var(--red-border); color: var(--red);">${msg}</div>`;
+}
+
+// ============ RENDER TIMESHEET ============
+function renderTimesheet() {
+  const card = document.getElementById('timesheetCard');
+  if (!state.timesheet) { card.style.display = 'none'; return; }
+  card.style.display = 'block';
+
+  const { dates, rows } = state.timesheet;
+  document.getElementById('timesheetMeta').textContent =
+    `(${rows.length} ажилтан, ${dates.length} өдөр)`;
+
+  const search = state.timesheetSearch.toLowerCase();
+  const filtered = rows.filter(r => !search ||
+    r.name.toLowerCase().includes(search) ||
+    (r.posRaw || '').toLowerCase().includes(search));
+
+  const table = document.getElementById('timesheetTable');
+  let html = '<thead><tr><th style="position: sticky; left: 0; background: var(--bg-elev); z-index: 2;">№</th>' +
+    '<th style="position: sticky; left: 40px; background: var(--bg-elev); z-index: 2;">Нэр</th>' +
+    '<th>Албан тушаал</th>';
+  dates.forEach(d => {
+    html += `<th class="timesheet-cell">${d.getMonth()+1}/${d.getDate()}</th>`;
+  });
+  html += '</tr></thead><tbody>';
+  filtered.forEach((row, i) => {
+    html += `<tr><td style="position: sticky; left: 0; background: var(--bg-card); color: var(--text-faint);">${i+1}</td>`;
+    html += `<td style="position: sticky; left: 40px; background: var(--bg-card); font-weight: 500;">${row.name}</td>`;
+    html += `<td>${row.posRaw || '—'}</td>`;
+    dates.forEach(d => {
+      const dStr = toLocalISO(d);
+      const code = row.days[dStr];
+      const cls = classifyCode(code);
+      const className = cls ? `timesheet-cell ${cls}` : 'timesheet-cell';
+      html += `<td class="${className}">${code || ''}</td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</tbody>';
+  table.innerHTML = html;
+}
+
+// ============ SALARY CALCULATION ============
+function computeSalary(row, fromDate, toDate) {
+  let full = 0, half = 0, road = 0, rest = 0;
+  for (const dStr in row.days) {
+    // Filter by date range — parse as local date
+    if (fromDate || toDate) {
+      const parts = dStr.split('-');
+      const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+      if (fromDate && d < fromDate) continue;
+      if (toDate && d > toDate) continue;
+    }
+    const code = row.days[dStr];
+    const cls = classifyCode(code);
+    if (cls === 'worked') full++;
+    else if (cls === 'half') half++;
+    else if (cls === 'road') road++;
+    else if (cls === 'rest') rest++;
+  }
+  return { full, half, road, rest, totalDays: full + road + half * 0.5 };
+}
+
+// Compute salary period (from/to dates) based on cycle setting
+function getSalaryPeriod() {
+  const cycle = document.getElementById('salaryCycle').value;
+  const monthStr = document.getElementById('salaryMonth').value.trim();
+
+  // Parse year/month from input (YYYY.MM or YYYY-MM)
+  let year, month;
+  const mm = monthStr.match(/^(\d{4})[.\-\/](\d{1,2})$/);
+  if (mm) {
+    year = parseInt(mm[1], 10);
+    month = parseInt(mm[2], 10) - 1; // JS month is 0-indexed
+  } else {
+    const today = new Date();
+    year = today.getFullYear();
+    month = today.getMonth();
+  }
+
+  if (cycle === 'custom') {
+    const from = fromDotted(document.getElementById('salaryFrom').value);
+    const to = fromDotted(document.getElementById('salaryTo').value);
+    return { from, to, label: 'Гараар сонгосон хугацаа' };
+  }
+
+  // v153: cycle windows per company rule —
+  //   10-ны цалин: өмнөх сарын 24 → энэ сарын 8
+  //   25-ны цалин: энэ сарын 9 → 23
+  if (cycle === '10') {
+    const from = new Date(year, month - 1, 24);
+    const to = new Date(year, month, 8);
+    return { from, to, label: `${year}.${String(month+1).padStart(2,'0')}.10-ны цалин` };
+  }
+
+  if (cycle === '25') {
+    const from = new Date(year, month, 9);
+    const to = new Date(year, month, 23);
+    return { from, to, label: `${year}.${String(month+1).padStart(2,'0')}.25-ны цалин` };
+  }
+
+  // Auto: pick cycle based on today's date
+  const today = new Date();
+  const day = today.getDate();
+  if (day >= 9 && day <= 23) {
+    // Currently in 9-23 window — paying this month's 25th
+    const from = new Date(today.getFullYear(), today.getMonth(), 9);
+    const to = new Date(today.getFullYear(), today.getMonth(), 23);
+    return { from, to, label: `${today.getFullYear()}.${String(today.getMonth()+1).padStart(2,'0')}.25-ны цалин` };
+  } else {
+    // 24-31 or 1-8 — paying 10th
+    if (day >= 24) {
+      // 24-31: end of month, paying NEXT month's 10th
+      const from = new Date(today.getFullYear(), today.getMonth(), 24);
+      const to = new Date(today.getFullYear(), today.getMonth() + 1, 8);
+      const ny = to.getFullYear(), nm = to.getMonth() + 1;
+      return { from, to, label: `${ny}.${String(nm).padStart(2,'0')}.10-ны цалин` };
+    } else {
+      // 1-8: paying THIS month's 10th
+      const from = new Date(today.getFullYear(), today.getMonth() - 1, 24);
+      const to = new Date(today.getFullYear(), today.getMonth(), 8);
+      return { from, to, label: `${today.getFullYear()}.${String(today.getMonth()+1).padStart(2,'0')}.10-ны цалин` };
+    }
+  }
+}
+
+function renderSalary() {
+  // Rates table
+  const ratesBody = document.getElementById('salaryRatesBody');
+  if (ratesBody) ratesBody.innerHTML = POSITIONS.map(pos => `
+    <tr>
+      <td>${pos}</td>
+      <td class="num">
+        <input type="number" class="num-input editable" value="${state.rates[pos] || 0}" step="10000"
+               onchange="updateRate('${pos}', this.value)" />
+      </td>
+    </tr>
+  `).join('');
+
+  // Period info
+  const period = getSalaryPeriod();
+  const cycle = document.getElementById('salaryCycle').value;
+  const fromEl = document.getElementById('salaryFrom');
+  const toEl = document.getElementById('salaryTo');
+  const monthEl = document.getElementById('salaryMonth');
+
+  // Auto-fill from/to inputs when cycle is not custom
+  if (cycle !== 'custom' && period.from && period.to) {
+    fromEl.value = toDotted(period.from.toISOString().slice(0,10));
+    toEl.value = toDotted(period.to.toISOString().slice(0,10));
+    fromEl.disabled = true;
+    toEl.disabled = true;
+  } else {
+    fromEl.disabled = false;
+    toEl.disabled = false;
+  }
+  monthEl.disabled = (cycle === 'custom');
+
+  const rangeInfo = document.getElementById('salaryRangeInfo');
+  if (period.from && period.to) {
+    rangeInfo.innerHTML = `
+      <strong>${period.label}</strong> — Тооцооны хугацаа: ${fmtDate(period.from)} → ${fmtDate(period.to)} (${Math.round((period.to - period.from) / 86400000) + 1} өдөр)<br>
+      <span style="font-size: 12px;">Цалин = Өдрийн цалин × (Ажилласан өдөр + Зам өдөр + ½ × Тал өдөр).</span>
+    `;
+  } else {
+    rangeInfo.innerHTML = `<strong style="color: var(--red);">Огнооны хугацаа тодорхойгүй</strong> — "Цалингийн он сар" болон "Эхлэх/Дуусах огноо"-г шалгана уу.`;
+  }
+
+  // Per-employee salary
+  const tbody = document.getElementById('salaryBody');
+  const statusEl = document.getElementById('salaryStatus');
+
+  if (!state.timesheet) {
+    tbody.innerHTML = '';
+    document.getElementById('salaryTotal').textContent = '—';
+    statusEl.innerHTML = '<div class="info-banner" style="background: var(--orange-bg); border-color: var(--orange-border); color: var(--orange);">Цалин бодохын тулд эхлээд "Цагийн бүртгэл" таб дээр файл оруулна уу.</div>';
+    return;
+  }
+  statusEl.innerHTML = `<div class="success-banner">✓ Цагийн бүртгэл оруулсан — ${state.timesheet.rows.length} ажилтны цалин тооцоологдов.</div>`;
+
+  let totalSalary = 0;
+  // v130: filter excluded names
+  const visibleRows = state.timesheet.rows.filter(r => !state.excludedNames[r.name]);
+  const excludedCount = state.timesheet.rows.length - visibleRows.length;
+  tbody.innerHTML = visibleRows.map((row, i) => {
+    const pos = state.employees.find(e => e.name === row.name)?.pos || row.pos || '—';
+    // v129: per-employee rate override; fall back to position rate
+    const overrideRate = state.empRates[row.name];
+    const rate = (overrideRate !== undefined && overrideRate !== null && overrideRate !== '') ? +overrideRate : (state.rates[pos] || 0);
+    const c = computeSalary(row, period.from, period.to);
+    const salary = c.totalDays * rate;
+    totalSalary += salary;
+    const isOverride = overrideRate !== undefined && overrideRate !== null && overrideRate !== '';
+    const rateBg = isOverride ? 'background: var(--accent-bg); border-color: var(--accent);' : '';
+    const safeName = String(row.name).replace(/"/g, '&quot;').replace(/'/g, "\\'");
+    return `
+      <tr>
+        <td style="color: var(--text-faint);">${i+1}</td>
+        <td style="font-weight: 500;">${row.name}</td>
+        <td>${pos}</td>
+        <td class="num">${c.full}</td>
+        <td class="num" style="color: var(--blue);">${c.road}</td>
+        <td class="num" style="color: var(--orange);">${c.half}</td>
+        <td class="num" style="color: var(--text-faint);">${c.rest}</td>
+        <td class="num"><strong>${c.totalDays}</strong></td>
+        <td class="num"><input type="number" class="num-input editable" value="${rate}" step="10000" min="0" style="width:110px;text-align:right;${rateBg}" onchange="updateEmpRate('${safeName}', this.value)" onfocus="this.select()" title="Хоосон → албан тушаалын суурь цалинд буцна" /></td>
+        <td class="num" style="color: var(--green); font-weight: 600;">${fmt(salary)}</td>
+        <td><input type="text" class="editable" value="${(state.notes[row.name] || '').replace(/"/g, '&quot;')}" placeholder="—"
+               style="width:150px;font-size:12px;padding:4px 6px;" onchange="updateNote('${safeName}', this.value)" /></td>
+        <td><span class="row-action" onclick="excludeFromSalary('${safeName}')" title="Жагсаалтаас хасах" style="cursor:pointer;color:var(--text-faint);font-weight:700;padding:4px 8px;">✕</span></td>
+      </tr>
+    `;
+  }).join('');
+  // Restore link if any are excluded
+  if (excludedCount > 0) {
+    const restoreHtml = '<div style="margin-top:8px;font-size:11px;color:var(--text-faint);">' +
+      excludedCount + ' ажилтан жагсаалтаас хасагдсан. ' +
+      '<a href="#" onclick="restoreAllExcluded();return false;" style="color:var(--blue);text-decoration:underline;">Бүгдийг сэргээх</a>' +
+      '</div>';
+    tbody.insertAdjacentHTML('afterend', '<div id="excludedNotice">' + restoreHtml + '</div>');
+    // Remove duplicates if already present from a previous render
+    const allNotices = document.querySelectorAll('#excludedNotice');
+    if (allNotices.length > 1) {
+      for (let i = 0; i < allNotices.length - 1; i++) allNotices[i].remove();
+    }
+  } else {
+    document.querySelectorAll('#excludedNotice').forEach(n => n.remove());
+  }
+  document.getElementById('salaryTotal').textContent = fmt(totalSalary);
+}
+
+// v153: per-person note (Тайлбар column), persisted like rate overrides
+function updateNote(name, val) {
+  if (val && String(val).trim() !== '') state.notes[name] = String(val).trim();
+  else delete state.notes[name];
+  _persistSave();
+}
+
+// v133: Mark/undo bonus payment for a person
+function markBonusPaid(name) {
+  const today = _todayISO();
+  state.bonusHistory[name] = {
+    lastPaid: today,
+    nextDue: _addMonths(today, 3)  // next quarter is +3 months from payment date
+  };
+  _persistSave();
+  renderRegistry();
+}
+function undoBonusPaid(name) {
+  if (!confirm('Энэ ажилтны урамшууллыг буцаах уу?')) return;
+  // v154: store an EXPLICIT unpaid record. Simply deleting the history would
+  // fall back to the "qualifier default = paid on 07-10" rule and the undo
+  // would appear to do nothing.
+  state.bonusHistory[name] = { lastPaid: null, nextDue: _rollBonusForward(FIRST_BONUS_DATE) };
+  _persistSave();
+  renderRegistry();
+}
+
+// v130: Exclude an employee from salary and registry lists
+function excludeFromSalary(name) {
+  state.excludedNames[name] = true;
+  _persistSave();
+  renderAll();
+}
+function restoreAllExcluded() {
+  state.excludedNames = {};
+  _persistSave();
+  renderAll();
+}
+
+// v129: Update a single employee's daily rate override
+function updateEmpRate(name, val) {
+  const num = parseFloat(val);
+  if (!val || val === '' || isNaN(num) || num <= 0) {
+    delete state.empRates[name];  // empty → fall back to position rate
+  } else {
+    state.empRates[name] = num;
+  }
+  _persistSave();
+  renderSalary();
+}
+
+// ============ RENDER REGISTRY ============
+function renderRegistry() {
+  const params = getParams();
+  const v1 = getV1Params();
+  const v2 = getV2Params();
+  const tbody = document.getElementById('registryBody');
+  tbody.innerHTML = '';
+
+  let counters = { 'Эрхтэй': 0, 'Жинхлэгдсэн': 0, 'Туршилт': 0 };
+  let totalV1Q = 0, totalV2Q = 0;
+  const search = state.search.toLowerCase();
+
+  let visibleIdx = 0;
+  state.employees.forEach((emp) => {
+    if (state.excludedNames[emp.name]) return;  // v130: skip excluded
+    const r = computeStatus(emp, params);
+    if (r.status) counters[r.status]++;
+
+    let bonusV1 = 0, bonusV2 = 0;
+    if (r.status === 'Эрхтэй') {
+      bonusV1 = v1.bonus;
+      const rate = state.rates[emp.pos] || 0;
+      bonusV2 = rate * v2.days * v2.pct;
+      totalV1Q += bonusV1;
+      totalV2Q += bonusV2;
+    }
+
+    if (state.filter !== 'all' && r.status !== state.filter) return;
+    if (search && !emp.name.toLowerCase().includes(search) && !(emp.pos || '').toLowerCase().includes(search)) return;
+
+    visibleIdx++;
+    const tr = document.createElement('tr');
+    const badgeClass = r.status === 'Эрхтэй' ? 'badge-green' : r.status === 'Жинхлэгдсэн' ? 'badge-orange' : 'badge-red';
+
+    // v133: bonus payment tracking
+    const bInfo = getBonusInfo(emp.name, r.status === 'Эрхтэй');
+    const safeName = String(emp.name).replace(/"/g, '&quot;').replace(/'/g, "\\'");
+    const today = _todayISO();
+    let nextColor = 'var(--text-dim)';
+    if (bInfo.nextDue < today) nextColor = '#e74c3c';            // past due → red
+    else if ((new Date(bInfo.nextDue) - new Date(today)) <= 7 * 86400000) nextColor = '#f5a623'; // within 7 days → orange
+    const paidCell = bInfo.lastPaid
+      ? `<td style="color: var(--green); font-family: var(--mono); font-size: 11px;">✓ ${fmtDate(new Date(bInfo.lastPaid))}</td>`
+      : `<td style="color: var(--text-faint); font-size: 11px;">— Аваагүй</td>`;
+    const actionCell = bInfo.lastPaid
+      ? `<td><button class="filter-chip" onclick="undoBonusPaid('${safeName}')" title="Урамшуулал буцаах" style="font-size:11px;padding:3px 8px;">↶ Буцаах</button></td>`
+      : (r.status === 'Эрхтэй'
+          ? `<td><button class="filter-chip active" onclick="markBonusPaid('${safeName}')" title="Урамшуулал олгох" style="font-size:11px;padding:3px 8px;background:var(--green);color:white;">✓ Олгох</button></td>`
+          : `<td style="color: var(--text-faint); font-size: 11px;">—</td>`);
+
+    tr.innerHTML = `
+      <td style="color: var(--text-faint);">${visibleIdx}</td>
+      <td><input type="text" class="editable" value="${String(emp.name).replace(/"/g, '&quot;')}"
+             style="width:150px;font-weight:500;font-size:12px;padding:4px 6px;"
+             onchange="updateEmp('${emp.id}', 'name', this.value)" /></td>
+      <td>
+        <select onchange="updateEmp('${emp.id}', 'pos', this.value)">
+          ${POSITIONS.map(p => `<option value="${p}"${p === emp.pos ? ' selected' : ''}>${p}</option>`).join('')}
+        </select>
+      </td>
+      <td><input type="text" class="date-input" value="${toDotted(emp.start)}" placeholder="YYYY.MM.DD" onchange="updateEmpDate('${emp.id}', this.value)" /></td>
+      <td class="num" style="color: var(--text-dim);">${r.months ?? '—'}</td>
+      <td style="color: var(--text-dim); font-family: var(--mono); font-size: 11px;">${fmtDate(r.permDate)}</td>
+      <td style="color: var(--text-dim); font-family: var(--mono); font-size: 11px;">${fmtDate(r.eligDate)}</td>
+      <td><span class="badge ${badgeClass}">${r.status || '—'}</span></td>
+      <td class="num" style="${bonusV1 ? 'color: var(--green); font-weight: 600;' : 'color: var(--text-faint);'}">${bonusV1 ? fmt(bonusV1) : '—'}</td>
+      ${paidCell}
+      <td style="color: ${nextColor}; font-family: var(--mono); font-size: 11px; font-weight: 600;">${fmtDate(new Date(bInfo.nextDue))}</td>
+      ${actionCell}
+      <td><input type="text" class="editable" value="${(state.notes[emp.name] || '').replace(/"/g, '&quot;')}" placeholder="—"
+             style="width:150px;font-size:12px;padding:4px 6px;" onchange="updateNote('${safeName}', this.value)" /></td>
+      <td><span class="row-action" onclick="deleteEmp('${emp.id}')" title="Устгах">✕</span></td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  // v132: count only non-excluded employees for the Нийт ажилтан KPI and header
+  const total = state.employees.filter(e => !state.excludedNames[e.name]).length;
+  document.getElementById('empCount').textContent = `(${total} ажилтан)`;
+  document.getElementById('kpiRow').innerHTML = `
+    <div class="kpi"><div class="kpi-label">Нийт ажилтан</div><div class="kpi-value">${total}</div></div>
+    <div class="kpi"><div class="kpi-label">Туршилт</div><div class="kpi-value red">${counters['Туршилт']}</div></div>
+    <div class="kpi"><div class="kpi-label">Жинхлэгдсэн</div><div class="kpi-value orange">${counters['Жинхлэгдсэн']}</div></div>
+    <div class="kpi"><div class="kpi-label">Эрхтэй</div><div class="kpi-value green">${counters['Эрхтэй']}</div></div>
+    <div class="kpi"><div class="kpi-label">Х1 — Улирлын олговор</div><div class="kpi-value accent">${fmt(totalV1Q)}</div></div>
+  `;
+
+  document.getElementById('totalV1Q').textContent = fmt(totalV1Q);
+  document.getElementById('totalV1Y').textContent = fmt(totalV1Q * v1.quarters);
+}
+
+// ============ RENDER V1 ============
+function renderV1() {
+  const params = getParams();
+  const v1 = getV1Params();
+  const counts = {};
+  POSITIONS.forEach(p => counts[p] = 0);
+  state.employees.forEach(emp => {
+    const r = computeStatus(emp, params);
+    if (r.status === 'Эрхтэй') counts[emp.pos] = (counts[emp.pos] || 0) + 1;
+  });
+
+  const tbody = document.getElementById('v1Body');
+  tbody.innerHTML = '';
+  let totalCount = 0, totalQ = 0, totalY = 0;
+  POSITIONS.forEach(pos => {
+    const c = counts[pos] || 0;
+    if (c === 0) return;
+    const q = c * v1.bonus;
+    const y = q * v1.quarters;
+    totalCount += c; totalQ += q; totalY += y;
+    tbody.innerHTML += `
+      <tr>
+        <td>${pos}</td>
+        <td class="num">${c}</td>
+        <td class="num">${fmt(q)}</td>
+        <td class="num">${fmt(y)}</td>
+      </tr>`;
+  });
+  document.getElementById('v1TotalCount').textContent = totalCount;
+  document.getElementById('v1TotalQ').textContent = fmt(totalQ);
+  document.getElementById('v1TotalY').textContent = fmt(totalY);
+}
+
+// ============ RENDER V2 ============
+function renderV2() {
+  const params = getParams();
+  const v2 = getV2Params();
+  const counts = {};
+  POSITIONS.forEach(p => counts[p] = 0);
+  state.employees.forEach(emp => {
+    const r = computeStatus(emp, params);
+    if (r.status === 'Эрхтэй') counts[emp.pos] = (counts[emp.pos] || 0) + 1;
+  });
+
+  const tbody = document.getElementById('v2Body');
+  tbody.innerHTML = '';
+  let totalCount = 0, totalQ = 0, totalY = 0;
+  POSITIONS.forEach(pos => {
+    const c = counts[pos] || 0;
+    const rate = state.rates[pos] || 0;
+    if (c === 0 && rate === 0) return;
+    const twentyDays = rate * v2.days;
+    const perPerson = twentyDays * v2.pct;
+    const q = perPerson * c;
+    const y = q * v2.quarters;
+    totalCount += c; totalQ += q; totalY += y;
+    tbody.innerHTML += `
+      <tr>
+        <td>${pos}</td>
+        <td class="num">
+          <input type="number" class="num-input editable" value="${rate}" step="10000"
+                 onchange="updateRate('${pos}', this.value)" />
+        </td>
+        <td class="num">${c}</td>
+        <td class="num" style="color: var(--text-dim);">${fmt(twentyDays)}</td>
+        <td class="num" style="color: var(--text-dim);">${fmt(perPerson)}</td>
+        <td class="num">${fmt(q)}</td>
+        <td class="num">${fmt(y)}</td>
+      </tr>`;
+  });
+  document.getElementById('v2TotalCount').textContent = totalCount;
+  document.getElementById('v2TotalQ').textContent = fmt(totalQ);
+  document.getElementById('v2TotalY').textContent = fmt(totalY);
+}
+
+// ============ RENDER COMPARISON ============
+function renderCompare() {
+  const params = getParams();
+  const v1 = getV1Params();
+  const v2 = getV2Params();
+  let count = 0, totalV1Q = 0, totalV2Q = 0;
+  state.employees.forEach(emp => {
+    const r = computeStatus(emp, params);
+    if (r.status === 'Эрхтэй') {
+      count++;
+      totalV1Q += v1.bonus;
+      totalV2Q += (state.rates[emp.pos] || 0) * v2.days * v2.pct;
+    }
+  });
+  const v1Y = totalV1Q * v1.quarters;
+  const v2Y = totalV2Q * v2.quarters;
+  const rows = [
+    ['Эрхтэй ажилтны тоо', count, count, '—'],
+    ['Нэг улиралд төлөх дүн', fmt(totalV1Q), fmt(totalV2Q), fmt(totalV2Q - totalV1Q)],
+    ['Жилийн нийт дүн', fmt(v1Y), fmt(v2Y), fmt(v2Y - v1Y)],
+    ['Дундаж нэг хүний улирлын урамшуулал', fmt(count ? totalV1Q/count : 0), fmt(count ? totalV2Q/count : 0), fmt(count ? (totalV2Q - totalV1Q)/count : 0)],
+  ];
+  const tbody = document.getElementById('compareBody');
+  tbody.innerHTML = rows.map(([a,b,c,d]) =>
+    `<tr><td>${a}</td><td>${b}</td><td>${c}</td><td style="color: ${(typeof d === 'string' && d.includes('-') && !d.startsWith('—')) ? 'var(--red)' : 'var(--green)'};">${d}</td></tr>`
+  ).join('');
+}
+
+// ============ ACTIONS ============
+function updateEmp(id, field, value) {
+  const emp = state.employees.find(e => e.id === id);
+  if (emp) {
+    // v155: renaming migrates every name-keyed record (rate override, note,
+    // exclusion, bonus history) so nothing silently detaches from the person.
+    if (field === 'name') {
+      const oldName = emp.name, newName = String(value).trim();
+      if (!newName || newName === oldName) { renderAll(); return; }
+      ['empRates', 'notes', 'excludedNames', 'bonusHistory'].forEach(k => {
+        if (state[k] && Object.prototype.hasOwnProperty.call(state[k], oldName)) {
+          state[k][newName] = state[k][oldName];
+          delete state[k][oldName];
+        }
+      });
+      // timesheet rows are matched by name too
+      if (state.timesheet && state.timesheet.rows) {
+        state.timesheet.rows.forEach(r => { if (r.name === oldName) r.name = newName; });
+      }
+      emp.name = newName;
+      _persistSave();
+      renderAll();
+      return;
+    }
+    emp[field] = value;
+    renderAll();
+  }
+}
+function updateEmpDate(id, value) {
+  const emp = state.employees.find(e => e.id === id);
+  if (!emp) return;
+  const d = fromDotted(value);
+  if (d) {
+    emp.start = d.getFullYear() + '-' +
+      String(d.getMonth()+1).padStart(2,'0') + '-' +
+      String(d.getDate()).padStart(2,'0');
+  } else if (!value.trim()) {
+    emp.start = '';
+  } else {
+    alert('Огнооны формат буруу. Жишээ: 2025.01.01');
+  }
+  renderAll();
+}
+function deleteEmp(id) {
+  if (confirm('Энэ ажилтныг устгах уу?')) {
+    state.employees = state.employees.filter(e => e.id !== id);
+    renderAll();
+  }
+}
+function addEmployee() {
+  const name = prompt('Овог нэр оруулна уу:');
+  if (!name) return;
+  state.employees.push({
+    id: uid(),
+    name: name.trim(),
+    pos: POSITIONS[0],
+    start: toLocalISO(new Date())
+  });
+  renderAll();
+}
+function updateRate(pos, val) {
+  state.rates[pos] = +val || 0;
+  renderAll();
+}
+function switchTab(ev, name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  ev.target.classList.add('active');
+  document.getElementById('panel-' + name).classList.add('active');
+}
+function renderAll() {
+  renderRegistry();
+  renderV1();
+  renderV2();
+  renderCompare();
+  renderSalary();
+}
+
+// ============ EXCEL EXPORT ============
+function downloadTemplate() {
+  const wb = XLSX.utils.book_new();
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = today.getMonth();
+  // Build header row with current month dates
+  const headers = ['№', 'Нэр', 'Албан тушаал', 'Ажилд орсон огноо'];
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  for (let d = 1; d <= daysInMonth; d++) {
+    headers.push(`${month+1}.${d}`);
+  }
+  const data = [headers];
+  // Example row
+  const example = [1, 'Х.Жишээ', 'Жолооч', '2025-06-15'];
+  for (let d = 1; d <= daysInMonth; d++) {
+    example.push(d <= 15 ? 'А' : (d === 16 ? 'Зам' : 'Ч'));
+  }
+  data.push(example);
+  // Empty rows
+  for (let i = 0; i < 30; i++) {
+    data.push([i + 2, '', '', '']);
+  }
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  XLSX.utils.book_append_sheet(wb, ws, 'Өдрийн бүртгэл');
+  XLSX.writeFile(wb, `Цагийн_бүртгэлийн_загвар_${year}_${month+1}.xlsx`);
+}
+
+function exportTimesheet() {
+  if (!state.timesheet) return;
+  const wb = XLSX.utils.book_new();
+  const { dates, rows } = state.timesheet;
+  const headers = ['№', 'Нэр', 'Албан тушаал', ...dates.map(d => `${d.getMonth()+1}.${d.getDate()}`)];
+  const data = [headers];
+  rows.forEach((row, i) => {
+    const r = [i+1, row.name, row.posRaw || ''];
+    dates.forEach(d => {
+      r.push(row.days[d.toISOString().slice(0,10)] || '');
+    });
+    data.push(r);
+  });
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  XLSX.utils.book_append_sheet(wb, ws, 'Өдрийн бүртгэл');
+  XLSX.writeFile(wb, `Цагийн_бүртгэл_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+function exportRegistry() {
+  const params = getParams();
+  const v1 = getV1Params();
+  const v2 = getV2Params();
+  const headers = ['№', 'Овог нэр', 'Ажлын байр', 'Ажилд орсон огноо', 'Ажилласан хугацаа (сар)',
+                   'Жинхлэгдэх огноо', 'Эрх үүсэх огноо', 'Төлөв',
+                   'Хувилбар 1 урамшуулал (₮)', 'Хувилбар 2 урамшуулал (₮)', 'Тайлбар'];
+  const data = [headers];
+  state.employees.forEach((emp, i) => {
+    const r = computeStatus(emp, params);
+    const bonusV1 = r.status === 'Эрхтэй' ? v1.bonus : 0;
+    const bonusV2 = r.status === 'Эрхтэй' ? (state.rates[emp.pos] || 0) * v2.days * v2.pct : 0;
+    data.push([
+      i+1, emp.name, emp.pos, emp.start || '',
+      r.months ?? '', fmtDate(r.permDate), fmtDate(r.eligDate), r.status || '',
+      bonusV1, bonusV2, state.notes[emp.name] || ''
+    ]);
+  });
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  XLSX.utils.book_append_sheet(wb, ws, 'Ажилтны бүртгэл');
+  XLSX.writeFile(wb, `Ажилтны_бүртгэл_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+function exportSalary() {
+  if (!state.timesheet) { alert('Цагийн бүртгэл оруулна уу.'); return; }
+  const period = getSalaryPeriod();
+  const headers = ['№', 'Нэр', 'Ажлын байр', 'Бүтэн өдөр', 'Зам', 'Тал өдөр', 'Чөлөө', 'Нийт ажилласан', 'Өдрийн цалин (₮)', 'Цалин (₮)', 'Тайлбар'];
+  const data = [
+    [period.label || 'Цалингийн тооцоо'],
+    [`Хугацаа: ${fmtDate(period.from)} → ${fmtDate(period.to)}`],
+    [],
+    headers
+  ];
+  let total = 0;
+  state.timesheet.rows.forEach((row, i) => {
+    const pos = state.employees.find(e => e.name === row.name)?.pos || row.pos || '';
+    const rate = state.rates[pos] || 0;
+    const c = computeSalary(row, period.from, period.to);
+    const salary = c.totalDays * rate;
+    total += salary;
+    data.push([i+1, row.name, pos, c.full, c.road, c.half, c.rest, c.totalDays, rate, salary, state.notes[row.name] || '']);
+  });
+  data.push(['', '', '', '', '', '', '', '', 'НИЙТ:', total]);
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  XLSX.utils.book_append_sheet(wb, ws, 'Цалин');
+  const fname = (period.label || 'Цалин').replace(/[^\w\u0400-\u04FF.-]/g, '_');
+  XLSX.writeFile(wb, `${fname}.xlsx`);
+}
+
+// ============ INIT ============
+const today = new Date();
+document.getElementById('calcDate').value = toDotted(toLocalISO(today));
+document.getElementById('todayDate').textContent = today.toLocaleDateString('mn-MN', {year: 'numeric', month: 'long', day: 'numeric'});
+
+// Default salary month = current month
+document.getElementById('salaryMonth').value =
+  `${today.getFullYear()}.${String(today.getMonth()+1).padStart(2,'0')}`;
+
+// Wire up inputs
+['calcDate', 'probationMonths', 'waitingMonths', 'v1Bonus', 'v1Quarters',
+ 'v2Days', 'v2Pct', 'v2Quarters',
+ 'salaryCycle', 'salaryMonth', 'salaryFrom', 'salaryTo'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('input', renderAll);
+  if (el && el.tagName === 'SELECT') el.addEventListener('change', renderAll);
+});
+
+// Filter chips
+document.querySelectorAll('.filter-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    state.filter = chip.dataset.filter;
+    renderRegistry();
+  });
+});
+
+document.getElementById('searchInput').addEventListener('input', (e) => {
+  state.search = e.target.value;
+  renderRegistry();
+});
+document.getElementById('timesheetSearch').addEventListener('input', (e) => {
+  state.timesheetSearch = e.target.value;
+  renderTimesheet();
+});
+
+// File upload
+const uploadZone = document.getElementById('uploadZone');
+const fileInput = document.getElementById('fileInput');
+uploadZone.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', (e) => {
+  if (e.target.files[0]) handleFile(e.target.files[0]);
+});
+uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+uploadZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  uploadZone.classList.remove('dragover');
+  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
+
+renderAll();
+
+// ============ v137: DIRECT SAME-ORIGIN BRIDGE (most reliable) + v136 fallback polling ============
+(function(){
+  if (window.parent === window) return;
+  console.log('[v137] iframe bridge initializing');
+
+  var lastSize = 0;
+
+  function tryDirectAccess() {
+    try {
+      var pBuf = window.parent._flumonAttendanceBuffer;
+      var pName = window.parent._flumonAttendanceFileName || 'Цагийн бүртгэл.xlsx';
+      if (!pBuf) return false;
+      var size = pBuf.byteLength || 0;
+      if (size === 0 || size === lastSize) return false;
+      console.log('[v137] direct access found buffer:', pName, '(' + size + ' bytes)');
+      var file = new File([pBuf.slice ? pBuf.slice(0) : pBuf], pName, {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      });
+      if (typeof handleFile === 'function') {
+        handleFile(file);
+        lastSize = size;
+        console.log('[v137] handleFile completed via direct access, employees:', state.employees ? state.employees.length : '?');
+        return true;
+      }
+    } catch(e) {
+      // Cross-origin or buffer not ready — silent
+    }
+    return false;
+  }
+
+  // Poll direct access every 500ms for first 60s, then every 5s
+  var fastTries = 0;
+  var fastTimer = setInterval(function(){
+    if (tryDirectAccess()) {
+      // Got it! Switch to slow polling for future updates.
+      clearInterval(fastTimer);
+      setInterval(tryDirectAccess, 5000);
+      console.log('[v137] data loaded, switching to slow polling');
+      return;
+    }
+    fastTries++;
+    if (fastTries >= 120) {  // 60 seconds
+      clearInterval(fastTimer);
+      setInterval(tryDirectAccess, 5000);
+      console.log('[v137] fast polling expired, switching to slow polling');
+    }
+  }, 500);
+
+  // Also keep the legacy postMessage path as backup
+  console.log('[v136] iframe bonus app: bridge initializing (legacy postMessage backup)');
+
+  var lastProcessedBufferSize = 0;
+
+  function processBuffer(buf, fname) {
+    if (!buf) return;
+    if (buf.byteLength === lastProcessedBufferSize && lastProcessedBufferSize > 0) {
+      // Same buffer size, likely a duplicate. Skip.
+      return;
+    }
+    console.log('[v136] processing attendance buffer:', fname, '(' + buf.byteLength + ' bytes)');
+    try {
+      var file = new File([buf], fname || 'Цагийн бүртгэл.xlsx', {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      });
+      if (typeof handleFile === 'function') {
+        handleFile(file);
+        lastProcessedBufferSize = buf.byteLength;
+        console.log('[v136] handleFile completed, employees:', (typeof state !== 'undefined' && state.employees ? state.employees.length : '?'));
+      } else {
+        console.warn('[v136] handleFile not ready yet, will retry');
+        setTimeout(function(){ processBuffer(buf, fname); }, 500);
+      }
+    } catch(e) {
+      console.error('[v136] processBuffer failed:', e);
+    }
+  }
+
+  // Listen for parent-pushed buffer
+  window.addEventListener('message', function(ev) {
+    if (!ev.data) return;
+    if (ev.data.type === 'flumon-attendance-file') {
+      processBuffer(ev.data.buffer, ev.data.fileName);
+    }
+  });
+
+  // Poll parent every 2s asking "do you have the attendance file?"
+  function pollParent() {
+    try {
+      window.parent.postMessage({type: 'flumon-request-attendance'}, '*');
+    } catch(e) {}
+  }
+  // Also notify ready (legacy)
+  function notifyReady() {
+    try {
+      window.parent.postMessage({type: 'flumon-bonus-iframe-ready'}, '*');
+    } catch(e) {}
+  }
+
+  function startBridge() {
+    notifyReady();
+    pollParent();
+    // Aggressive polling for first 30 seconds, then slow down
+    var fastPolls = 0;
+    var fastInterval = setInterval(function(){
+      pollParent();
+      fastPolls++;
+      if (fastPolls >= 30) {
+        clearInterval(fastInterval);
+        // Continue slow polling every 10s
+        setInterval(pollParent, 10000);
+      }
+    }, 1000);
+    console.log('[v136] bridge active, polling parent for attendance file');
+  }
+  if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    setTimeout(startBridge, 100);
+  } else {
+    window.addEventListener('DOMContentLoaded', function(){ setTimeout(startBridge, 100); });
+  }
+})();
+
+</script>
+
+</body>
+</html>
